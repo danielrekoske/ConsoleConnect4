@@ -49,9 +49,6 @@ class BotPlayer(Player):
     def move_6(self, state):
         mcts = MCTS(num_simulations = 1000)
         return mcts.search(state)
-
-    def move_7(self, state):
-        return self.q_learning_move(state)
     
     def minimax_search(self, board, depth, alpha, beta, maximizing_player):
         if depth == 0 or self.game_over(board):
@@ -220,7 +217,7 @@ class BotPlayer(Player):
             if q_values[move] > max_q_value:
                 max_q_value = q_values[move]
                 best_move = move
-
+    
         return best_move if best_move is not None else self.move_0(state)
 
     def get_state_key(self, state):
