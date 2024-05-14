@@ -1,4 +1,5 @@
 import random
+import pickle
 from Player import Player
 from game_state import GameState, EMPTY_SLOT
 from MCTS import MCTS
@@ -8,6 +9,11 @@ class BotPlayer(Player):
         super().__init__(token)
         self.difficulty = difficulty
         self.opponent_token = 'X' if token == 'O' else 'O'
+        self.q_table = None
+
+    def load_q_table(self, filename):
+        with open(filename, 'rb') as f:
+            self.q_table = pickle.load(f)
 
     def get_move(self, game_state):
         move_func = getattr(self, f"move_{self.difficulty}", None)
@@ -44,6 +50,9 @@ class BotPlayer(Player):
         mcts = MCTS(num_simulations = 1000)
         return mcts.search(state)
 
+    def move_7(self, state):
+        return self.q_learning_move(state)
+    
     def minimax_search(self, board, depth, alpha, beta, maximizing_player):
         if depth == 0 or self.game_over(board):
             return self.evaluate(board, self.token), None
@@ -76,7 +85,6 @@ class BotPlayer(Player):
                     if beta <= alpha:
                         break 
             return min_eval, best_move
-
     
     def is_winning_move(self, board, col, token):
         temp_board = [row[:] for row in board]
@@ -194,3 +202,26 @@ class BotPlayer(Player):
             if self.is_valid_location(board, col):
                 return False
         return True
+
+    def q_learning_move(self, state):
+        if self.q_table is None:
+            self.load_q_table('q_table.pkl')
+
+        state_key = self.get_state_key(state)
+        if state_key not in self.q_table:
+            return self.move_0(state)
+
+        q_values = self.q_table[state_key]
+        legal_moves = state.get_legal_moves()
+        max_q_value = float('-inf')
+        best_move = None
+
+        for move in legal_moves:
+            if q_values[move] > max_q_value:
+                max_q_value = q_values[move]
+                best_move = move
+
+        return best_move if best_move is not None else self.move_0(state)
+
+    def get_state_key(self, state):
+        return tuple(tuple(row) for row in state.board), state.current_player
