@@ -1,5 +1,5 @@
 import random
-import pickle
+import time
 from Player import Player
 from game_state import GameState, EMPTY_SLOT
 from MCTS import MCTS
@@ -9,11 +9,6 @@ class BotPlayer(Player):
         super().__init__(token)
         self.difficulty = difficulty
         self.opponent_token = 'X' if token == 'O' else 'O'
-        self.q_table = None
-
-    def load_q_table(self, filename):
-        with open(filename, 'rb') as f:
-            self.q_table = pickle.load(f)
 
     def get_move(self, game_state):
         move_func = getattr(self, f"move_{self.difficulty}", None)
@@ -29,27 +24,38 @@ class BotPlayer(Player):
         for col in range(GameState.COLUMNS):
             if self.is_winning_move(state.board, col, self.token):
                 return col
-        return self.move_0(state.board)
+        return self.move_0(state)
 
     def move_2(self, state):
         for col in range(GameState.COLUMNS):
             if self.is_winning_move(state.board, col, self.opponent_token):
                 return col
-        return self.move_1(state.board)
+        return self.move_1(state)
     
     def move_3(self, state):
-        return self.minimax_search(state.board, self.difficulty, float('-inf'), float('inf'), True)[1]
-    
+        return self.iterative_deepening_minimax(state, max_time=.25) 
+
     def move_4(self, state):
-        return self.minimax_search(state.board, self.difficulty, float('-inf'), float('inf'), True)[1]
+        return self.iterative_deepening_minimax(state, max_time=.5) 
 
     def move_5(self, state):
-        return self.minimax_search(state.board, self.difficulty, float('-inf'), float('inf'), True)[1]
+        return self.iterative_deepening_minimax(state, max_time=1) 
     
     def move_6(self, state):
-        mcts = MCTS(num_simulations = 1000)
+        mcts = MCTS(num_simulations=1000)
         return mcts.search(state)
-    
+
+    def iterative_deepening_minimax(self, state, max_time):
+        start_time = time.time()
+        best_move = None
+        depth = 1
+        while time.time() - start_time < max_time:
+            current_move = self.minimax_search(state.board, depth, float('-inf'), float('inf'), True)
+            if current_move[1] is not None:
+                best_move = current_move[1]
+            depth += 1
+        return best_move
+
     def minimax_search(self, board, depth, alpha, beta, maximizing_player):
         if depth == 0 or self.game_over(board):
             return self.evaluate(board, self.token), None
@@ -82,7 +88,7 @@ class BotPlayer(Player):
                     if beta <= alpha:
                         break 
             return min_eval, best_move
-    
+
     def is_winning_move(self, board, col, token):
         temp_board = [row[:] for row in board]
         self.drop_piece(temp_board, col, token)
@@ -199,26 +205,3 @@ class BotPlayer(Player):
             if self.is_valid_location(board, col):
                 return False
         return True
-
-    def q_learning_move(self, state):
-        if self.q_table is None:
-            self.load_q_table('q_table.pkl')
-
-        state_key = self.get_state_key(state)
-        if state_key not in self.q_table:
-            return self.move_0(state)
-
-        q_values = self.q_table[state_key]
-        legal_moves = state.get_legal_moves()
-        max_q_value = float('-inf')
-        best_move = None
-
-        for move in legal_moves:
-            if q_values[move] > max_q_value:
-                max_q_value = q_values[move]
-                best_move = move
-    
-        return best_move if best_move is not None else self.move_0(state)
-
-    def get_state_key(self, state):
-        return tuple(tuple(row) for row in state.board), state.current_player
