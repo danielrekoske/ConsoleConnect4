@@ -1,7 +1,6 @@
 import random
 from Player import Player
 from game_state import GameState, EMPTY_SLOT
-from MCTS import MonteCarloTreeSearch
 
 class BotPlayer(Player):
     def __init__(self, token, difficulty):
