@@ -1,6 +1,6 @@
 import random
 import math
-from game_state import GameState
+
 class Node:
     def __init__(self, state, parent=None, move=None):
         self.state = state
