@@ -1,6 +1,7 @@
 import random
 from Player import Player
 from game_state import GameState, EMPTY_SLOT
+from MCTS import MCTS
 
 class BotPlayer(Player):
     def __init__(self, token, difficulty):
@@ -38,6 +39,10 @@ class BotPlayer(Player):
 
     def move_5(self, state):
         return self.minimax_search(state.board, self.difficulty, float('-inf'), float('inf'), True)[1]
+    
+    def move_6(self, state):
+        mcts = MCTS(num_simulations = 1000)
+        return mcts.search(state)
 
     def minimax_search(self, board, depth, alpha, beta, maximizing_player):
         if depth == 0 or self.game_over(board):
