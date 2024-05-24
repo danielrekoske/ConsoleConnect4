@@ -34,9 +34,9 @@ class Game:
             self.turn += 1
 
 if __name__ == "__main__":
-    bot_difficulty = int(input("Choose bot difficulty level (0-7): "))
-    if bot_difficulty < 0 or bot_difficulty > 7:
-        print("Invalid difficulty level! Please choose a level between 0 and 7.")
+    bot_difficulty = int(input("Choose bot difficulty level (0-6): "))
+    if bot_difficulty < 0 or bot_difficulty > 6:
+        print("Invalid difficulty level! Please choose a level between 0 and 6.")
     else:
         game = Game(bot_difficulty)
         game.play()

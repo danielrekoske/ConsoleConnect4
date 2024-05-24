@@ -1,76 +1,69 @@
 import random
 import math
-
-class Node:
-    def __init__(self, state, parent=None, move=None):
-        self.state = state
-        self.parent = parent
-        self.children = []
-        self.visits = 0
-        self.wins = 0
-        self.move = move
-
-    def is_fully_expanded(self):
-        return len(self.children) == len(self.state.get_legal_moves())
-
-    def best_child(self, c_param=1.4):
-        choices_weights = [
-            (child.wins / child.visits) + c_param * math.sqrt((2 * math.log(self.visits) / child.visits))
-            for child in self.children
-        ]
-        return self.children[choices_weights.index(max(choices_weights))]
-
-    def most_visited_child(self):
-        return max(self.children, key=lambda child: child.visits)
+import copy
 
 class MCTS:
-    def __init__(self, num_simulations):
-        self.num_simulations = num_simulations
+    def __init__(self, exploration_weight=1):
+        self.exploration_weight = exploration_weight
 
-    def search(self, initial_state):
-        root = Node(initial_state)
-        
-        for _ in range(self.num_simulations):
-            node = self._tree_policy(root)
-            reward = self._default_policy(node.state)
-            self._backup(node, reward)
-        
-        return root.most_visited_child().move
+    def select(self, node):
+        best_value = float("-inf")
+        best_nodes = []
+        for child in node.children:
+            uct_value = (child.wins / child.visits) + self.exploration_weight * math.sqrt(
+                math.log(node.visits) / child.visits
+            )
+            if uct_value > best_value:
+                best_value = uct_value
+                best_nodes = [child]
+            elif uct_value == best_value:
+                best_nodes.append(child)
+        return random.choice(best_nodes)
 
-    def _tree_policy(self, node):
-        while not node.state.is_game_over():
-            if not node.is_fully_expanded():
-                return self._expand(node)
-            else:
-                node = node.best_child()
-        return node
+    def expand(self, node, game):
+        if node.is_terminal:
+            return
+        for move in game.get_legal_moves():
+            child = Node(parent=node, move=move, game=copy.deepcopy(game))
+            node.children.append(child)
 
-    def _expand(self, node):
-        legal_moves = node.state.get_legal_moves()
-        tried_moves = [child.move for child in node.children]
-        for move in legal_moves:
-            if move not in tried_moves:
-                new_state = node.state.clone()
-                new_state.make_move(move)
-                new_node = Node(new_state, parent=node, move=move)
-                node.children.append(new_node)
-                return new_node
-        raise Exception("Shouldn't reach here: No untried moves")
+    def simulate(self, node):
+        game = copy.deepcopy(node.game)
+        while not game.is_terminal():
+            move = random.choice(game.get_legal_moves())
+            game.apply_move(move)
+        return game.get_winner()
 
-    def _default_policy(self, state):
-        current_state = state.clone()
-        while not current_state.is_game_over():
-            move = random.choice(current_state.get_legal_moves())
-            current_state.make_move(move)
-        if current_state.winning_move('X'):
-            return 1
-        elif current_state.winning_move('O'):
-            return -1
-        else:
-            return 0
-
-    def _backup(self, node, reward):
+    def backpropagate(self, node, result):
         while node is not None:
             node.visits += 1
-            node.wins += reward
+            if result == node.game.current_player:
+                node.wins += 1
             node = node.parent
+
+    def get_best_move(self, root, game, heuristic_func):
+        self.expand(root, game)
+        
+        heuristic_scores = [(child, heuristic_func(child.game)) for child in root.children]
+        heuristic_scores.sort(key=lambda x: x[1], reverse=True)
+        top_nodes = [x[0] for x in heuristic_scores[:3]] 
+
+        for i in range(1000): 
+            for node in top_nodes:
+                leaf = self.select(node)
+                self.expand(leaf, game)
+                result = self.simulate(leaf)
+                self.backpropagate(leaf, result)
+
+        best_child = max(root.children, key=lambda c: c.visits)
+        return best_child.move
+
+class Node:
+    def __init__(self, parent=None, move=None, game=None):
+        self.parent = parent
+        self.move = move
+        self.game = game
+        self.wins = 0
+        self.visits = 0
+        self.children = []
+        self.is_terminal = game.is_game_over() if game else False

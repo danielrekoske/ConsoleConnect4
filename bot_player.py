@@ -3,6 +3,7 @@ import time
 from Player import Player
 from game_state import GameState, EMPTY_SLOT
 from MCTS import MCTS
+from MCTS import Node
 
 class BotPlayer(Player):
     def __init__(self, token, difficulty):
@@ -31,7 +32,7 @@ class BotPlayer(Player):
             if self.is_winning_move(state.board, col, self.opponent_token):
                 return col
         return self.move_1(state)
-    
+
     def move_3(self, state):
         return self.iterative_deepening_minimax(state, max_time=.25) 
 
@@ -40,10 +41,10 @@ class BotPlayer(Player):
 
     def move_5(self, state):
         return self.iterative_deepening_minimax(state, max_time=1) 
-    
+
     def move_6(self, state):
-        mcts = MCTS(num_simulations=1000)
-        return mcts.search(state)
+        mcts = MCTS()
+        return mcts.get_best_move(Node(game=state), state, self.evaluate)
 
     def iterative_deepening_minimax(self, state, max_time):
         start_time = time.time()
@@ -134,7 +135,7 @@ class BotPlayer(Player):
                     return True
 
         return False
-    
+
     def evaluate(self, board, token):
         opponent_token = 'X' if token == 'O' else 'O'
         score = 0
@@ -162,7 +163,7 @@ class BotPlayer(Player):
         score += self.evaluate_sequence(center_column, token)
 
         return score
-    
+
     def evaluate_sequence(self, sequence, token):
         score = 0
         for i in range(len(sequence) - 3):
@@ -176,7 +177,7 @@ class BotPlayer(Player):
             elif window.count(token) == 1 and window.count(EMPTY_SLOT) == 3:
                 score += 1
         return score
-    
+
     def check_winning_move(self, board, token):
         count = 0
         for col in range(len(board[0])):
@@ -185,7 +186,7 @@ class BotPlayer(Player):
                 if self.winning_move(temp_board, token):
                     count += 1
         return count
-    
+
     def game_over(self, board):
         return self.winning_move(board, self.token) or self.winning_move(board, self.opponent_token) or self.is_board_full(board)
 
