@@ -2,8 +2,6 @@ import random
 import time
 from Player import Player
 from game_state import GameState, EMPTY_SLOT
-from MCTS import MCTS
-from MCTS import Node
 
 class BotPlayer(Player):
     def __init__(self, token, difficulty):
@@ -41,10 +39,6 @@ class BotPlayer(Player):
 
     def move_5(self, state):
         return self.iterative_deepening_minimax(state, max_time=1) 
-
-    def move_6(self, state):
-        mcts = MCTS()
-        return mcts.get_best_move(Node(game=state), state, self.evaluate)
 
     def iterative_deepening_minimax(self, state, max_time):
         start_time = time.time()
